@@ -1,0 +1,38 @@
+# --- DEPENDENCIES ---
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# --- DOCKER & DATABASE ---
+postgres_data/
+*.db
+*.sqlite
+
+# --- ENVIRONNEMENT (SECRET) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env
+client/.env
+
+# --- PRODUCTION / BUILDS ---
+dist/
+build/
+client/dist/
+server/dist/
+.extpst/
+
+# --- LOGS ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+logs/
+
+# --- IDE & SYSTEM ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
