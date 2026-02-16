@@ -53,7 +53,7 @@ services:
     volumes:
       - ./client:/usr/src/app
       - /usr/src/app/node_modules
-      - ./shared:/usr/src/app/shared
+      - ./shared:/usr/src/shared
 
 volumes:
   postgres_data:

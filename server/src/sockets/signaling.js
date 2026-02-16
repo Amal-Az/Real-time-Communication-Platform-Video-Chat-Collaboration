@@ -21,12 +21,19 @@ export const setupSignaling = (io) => {
 
         console.log(` ${username} (ID:${user.id}) a rejoint ${roomName}`);
 
-        // 3. Notification : informer les autres membres (en envoyant l'ID de la DB)
+        // 3. informer les autres membres (en envoyant l'ID de la DB)
         socket.to(roomName).emit(SOCKET_EVENTS.USER_CONNECTED, { 
           username, 
           userId: user.id, 
           socketId: socket.id 
         });
+
+        // 4. informer l'utilisateur qu'il est connecté
+        socket.emit(SOCKET_EVENTS.ROOM_JOINED, { 
+         roomName, 
+         username,
+         userId: user.id 
+       });
 
       } catch (error) {
         console.error("Erreur jointure salle:", error);
@@ -39,7 +46,7 @@ export const setupSignaling = (io) => {
     socket.on(WEBRTC_EVENTS.OFFER, ({ offer, to, from }) => {
       io.to(to).emit(WEBRTC_EVENTS.OFFER, { offer, from });
     });
-
+    
     socket.on(WEBRTC_EVENTS.ANSWER, ({ answer, to, from }) => {
       io.to(to).emit(WEBRTC_EVENTS.ANSWER, { answer, from });
     });
