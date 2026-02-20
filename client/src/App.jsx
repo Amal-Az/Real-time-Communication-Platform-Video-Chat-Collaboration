@@ -7,7 +7,7 @@ import VideoPlayer from './components/VideoPlayer';
 function App() {
   const [isJoined, setIsJoined] = useState(false);
   const [userInfo, setUserInfo] = useState({ username: '', roomName: '' });
-  const stream = useMediaStream(); 
+  const [stream, startStream] = useMediaStream(); 
 
   useEffect(() => {
     socket.on(SOCKET_EVENTS.ROOM_JOINED, (data) => {
@@ -25,24 +25,34 @@ function App() {
     };
   }, []);
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (userInfo.username && userInfo.roomName) {
-      if (!socket.connected) {
-        socket.connect();
-      }
+      console.log('[App] handleJoin: demande de démarrage du stream...');
+      try {
+        await startStream();
+        console.log('[App] handleJoin: stream démarré, connexion socket...');
+        if (!socket.connected) socket.connect();
 
-      socket.once('connect', () => {
-        socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
-          username: userInfo.username,
-          roomName: userInfo.roomName
-        });
-      });
-
-      if (socket.connected) {
-        socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
-          username: userInfo.username,
-          roomName: userInfo.roomName
-        });
+        // Émettre la demande de jointure dès que la socket est connectée
+        if (socket.connected) {
+          console.log('[App] handleJoin: socket déjà connectée, émission JOIN_ROOM');
+          socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
+            username: userInfo.username,
+            roomName: userInfo.roomName
+          });
+        } else {
+          console.log('[App] handleJoin: en attente de connexion socket...');
+          socket.once('connect', () => {
+            console.log('[App] handleJoin: socket connectée, émission JOIN_ROOM');
+            socket.emit(SOCKET_EVENTS.JOIN_ROOM, {
+              username: userInfo.username,
+              roomName: userInfo.roomName
+            });
+          });
+        }
+      } catch (err) {
+        console.error('[App] handleJoin: erreur lors du démarrage du stream', err);
+        alert('Erreur : ' + (err?.message || 'impossible d\'accéder à la caméra'));
       }
     } else {
       alert("Remplis tous les champs !");
@@ -52,23 +62,24 @@ function App() {
   // VUE 1 : FORMULAIRE
   if (!isJoined) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '300px', margin: '100px auto' }}>
-        <h1>DULFI Video</h1>
-        <input 
-          placeholder="Ton pseudo" 
-          value={userInfo.username}
-          onChange={e => setUserInfo({...userInfo, username: e.target.value})}
-        />
-        <input 
-          placeholder="Nom de la salle" 
-          value={userInfo.roomName}
-          onChange={e => setUserInfo({...userInfo, roomName: e.target.value})}
-        />
-        <button onClick={handleJoin} style={{ padding: '10px', cursor: 'pointer' }}>
-          Rejoindre la réunion
-        </button>
+    <div style={{ textAlign: 'center', marginTop: '20px', color: 'white', background: '#121212', minHeight: '100vh', padding: '20px' }}>
+      <h2 style={{ marginBottom: '10px' }}>Salle : <span style={{ color: '#00d1b2' }}>{userInfo.roomName}</span></h2>
+      <p>Utilisateur : <strong>{userInfo.username}</strong></p>
+    
+      <div id="video-grid" style={{ display: 'flex', justifyContent: 'center', marginTop: '30px' }}>
+        <div style={{ position: 'relative' }}>
+          <p style={{ marginBottom: '5px' }}>Moi (Local)</p>
+          {stream ? (
+            <VideoPlayer stream={stream} muted={true} />
+          ) : (
+            <div style={{ width: '300px', height: '225px', background: '#333', display:'flex', alignItems:'center', justifyContent:'center', borderRadius: '12px' }}>
+               <p>Initialisation caméra...</p>
+            </div>
+          )}
+        </div>
       </div>
-    );
+    </div>
+  );
   }
   
   // VUE 2 : LA SALLE DE VISIO

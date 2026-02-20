@@ -1,31 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useMediaStream() {
   const [stream, setStream] = useState(null);
+  const currentStreamRef = useRef(null);
 
-  useEffect(() => {
-    async function enableStream() {
-      try {
-        const localStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        setStream(localStream);
-      } catch (err) {
-        console.error("Erreur accès média :", err);
-        alert("Impossible d'accéder à la caméra. Vérifie les autorisations !");
-      }
+  const startStream = useCallback(async () => {
+    console.log('[useMediaStream] startStream: vérification support navigator.mediaDevices...');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const err = new Error('getUserMedia non supporté ou contexte non sécurisé (HTTPS/localhost requis)');
+      console.error('[useMediaStream] startStream:', err.message);
+      throw err;
     }
 
-    enableStream();
+    console.log('[useMediaStream] startStream: appel getUserMedia...');
+    try {
+      const localStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: true 
+      });
+      console.log('[useMediaStream] startStream: flux obtenu', localStream);
+      currentStreamRef.current = localStream;
+      setStream(localStream);
+      return localStream;
+    } catch (err) {
+      console.error('[useMediaStream] startStream: erreur getUserMedia', err);
+      throw err;
+    }
+  }, []);
 
-    // On coupe la caméra si le composant est détruit
+  useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      console.log('[useMediaStream] cleanup: arrêt du flux...');
+      if (currentStreamRef.current) {
+        currentStreamRef.current.getTracks().forEach(t => {
+          console.log('[useMediaStream] cleanup: arrêt track', t.kind);
+          t.stop();
+        });
+        currentStreamRef.current = null;
       }
     };
   }, []);
 
-  return stream;
+  return [stream, startStream];
 }
